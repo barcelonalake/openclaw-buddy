@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oura Settings - OpenClaw Buddy</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: #1a1a1a;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 24px;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #1a1a1a;
+    }
+
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #444;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-family: "SF Mono", "Monaco", "Courier New", monospace;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      outline: none;
+      border-color: #007aff;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .hint a {
+      color: #007aff;
+      text-decoration: none;
+    }
+
+    .hint a:hover {
+      text-decoration: underline;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #007aff;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0051d5;
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .btn-test {
+      background: #34c759;
+      color: white;
+    }
+
+    .btn-test:hover {
+      background: #2fb84d;
+    }
+
+    .btn-test:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status.success {
+      background: #d4f4dd;
+      color: #1e7e34;
+      display: block;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      display: block;
+    }
+
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      display: block;
+    }
+
+    .health-display {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+
+    .health-icon {
+      font-size: 32px;
+    }
+
+    .health-info {
+      flex: 1;
+    }
+
+    .health-state {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .health-scores {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .health-state.HEALTHY {
+      color: #34c759;
+    }
+
+    .health-state.WEAK {
+      color: #ff9500;
+    }
+
+    .health-state.OVERLOAD {
+      color: #ff3b30;
+    }
+
+    .refresh-time {
+      font-size: 11px;
+      color: #999;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🦞 Oura Ring Settings</h1>
+    <p class="subtitle">Connect your Oura Ring to monitor your health state</p>
+
+    <div class="section">
+      <div class="section-title">API Configuration</div>
+      <div class="input-group">
+        <label for="token">Personal Access Token</label>
+        <input
+          type="password"
+          id="token"
+          placeholder="Enter your Oura API token"
+          autocomplete="off"
+        />
+        <div class="hint">
+          Get your token from
+          <a href="#" id="openTokenPage">cloud.ouraring.com/personal-access-tokens</a>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button class="btn-test" id="testBtn">Test Connection</button>
+        <button class="btn-primary" id="saveBtn">Save</button>
+        <button class="btn-secondary" id="cancelBtn">Cancel</button>
+      </div>
+
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="section" id="healthSection" style="display: none;">
+      <div class="section-title">Current Health State</div>
+      <div class="health-display">
+        <div class="health-icon" id="healthIcon">❤️</div>
+        <div class="health-info">
+          <div class="health-state" id="healthState">-</div>
+          <div class="health-scores" id="healthScores">-</div>
+          <div class="refresh-time" id="refreshTime">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    const tokenInput = document.getElementById('token');
+    const testBtn = document.getElementById('testBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const statusDiv = document.getElementById('status');
+    const healthSection = document.getElementById('healthSection');
+    const healthIcon = document.getElementById('healthIcon');
+    const healthState = document.getElementById('healthState');
+    const healthScores = document.getElementById('healthScores');
+    const refreshTime = document.getElementById('refreshTime');
+    const openTokenPage = document.getElementById('openTokenPage');
+
+    // Load existing token
+    ipcRenderer.invoke('oura-get-token').then(token => {
+      if (token) {
+        tokenInput.value = token;
+        loadHealthData();
+      }
+    });
+
+    // Open token page in browser
+    openTokenPage.addEventListener('click', (e) => {
+      e.preventDefault();
+      ipcRenderer.send('oura-open-token-page');
+    });
+
+    // Test connection
+    testBtn.addEventListener('click', async () => {
+      const token = tokenInput.value.trim();
+      if (!token) {
+        showStatus('Please enter a token', 'error');
+        return;
+      }
+
+      testBtn.disabled = true;
+      testBtn.textContent = 'Testing...';
+      showStatus('Testing connection...', 'info');
+
+      try {
+        const result = await ipcRenderer.invoke('oura-test-connection', token);
+        if (result.success) {
+          showStatus('✓ Connection successful!', 'success');
+          loadHealthData();
+        } else {
+          showStatus(`✗ ${result.message}`, 'error');
+        }
+      } catch (err) {
+        showStatus(`✗ ${err.message}`, 'error');
+      } finally {
+        testBtn.disabled = false;
+        testBtn.textContent = 'Test Connection';
+      }
+    });
+
+    // Save token
+    saveBtn.addEventListener('click', async () => {
+      const token = tokenInput.value.trim();
+      if (!token) {
+        showStatus('Please enter a token', 'error');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        await ipcRenderer.invoke('oura-save-token', token);
+        showStatus('✓ Token saved successfully!', 'success');
+        setTimeout(() => {
+          ipcRenderer.send('oura-close-settings');
+        }, 1500);
+      } catch (err) {
+        showStatus(`✗ ${err.message}`, 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    });
+
+    // Cancel
+    cancelBtn.addEventListener('click', () => {
+      ipcRenderer.send('oura-close-settings');
+    });
+
+    // Load health data
+    async function loadHealthData() {
+      try {
+        const health = await ipcRenderer.invoke('oura-get-health');
+        if (health) {
+          healthSection.style.display = 'block';
+
+          // Update icon based on state
+          const icons = {
+            'HEALTHY': '💚',
+            'WEAK': '💛',
+            'OVERLOAD': '❤️'
+          };
+          healthIcon.textContent = icons[health.healthState] || '❤️';
+
+          // Update state
+          healthState.textContent = health.healthState || 'Unknown';
+          healthState.className = `health-state ${health.healthState}`;
+
+          // Update scores
+          healthScores.textContent = `Sleep: ${health.sleepScore || 0} | Readiness: ${health.readinessScore || 0}`;
+
+          // Update time
+          if (health.timestamp) {
+            const date = new Date(health.timestamp);
+            refreshTime.textContent = `Last updated: ${date.toLocaleTimeString()}`;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load health data:', err);
+      }
+    }
+
+    function showStatus(message, type) {
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type}`;
+    }
+
+    // Listen for health updates
+    ipcRenderer.on('health-updated', () => {
+      loadHealthData();
+    });
+  </script>
+</body>
+</html>

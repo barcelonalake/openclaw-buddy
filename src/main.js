@@ -96,6 +96,7 @@ function getObjRect(bounds) {
 
 let win;
 let hitWin;  // input window — small opaque rect over hitbox, receives all pointer events
+let ouraSettingsWin = null;  // Oura settings window
 let tray = null;
 let contextMenuOwner = null;
 let currentSize = "S";
@@ -491,6 +492,7 @@ const _menuCtx = {
   discoverThemes: () => themeLoader.discoverThemes(),
   getActiveThemeId: () => activeTheme ? activeTheme._id : "clawd",
   ensureUserThemesDir: () => themeLoader.ensureUserThemesDir(),
+  openOuraSettings: () => openOuraSettings(),
 };
 const _menu = require("./menu")(_menuCtx);
 const { t, buildContextMenu, buildTrayMenu, rebuildAllMenus, createTray,
@@ -674,6 +676,107 @@ function createWindow() {
       hitWin.webContents.reload();
     });
   }
+
+  // ── Oura Settings Window ──
+  function openOuraSettings() {
+    if (ouraSettingsWin && !ouraSettingsWin.isDestroyed()) {
+      ouraSettingsWin.focus();
+      return;
+    }
+
+    ouraSettingsWin = new BrowserWindow({
+      width: 550,
+      height: 600,
+      resizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      },
+      title: "Oura Settings - OpenClaw Buddy",
+      show: false,
+    });
+
+    ouraSettingsWin.loadFile(path.join(__dirname, "oura-settings.html"));
+
+    ouraSettingsWin.once("ready-to-show", () => {
+      ouraSettingsWin.show();
+    });
+
+    ouraSettingsWin.on("closed", () => {
+      ouraSettingsWin = null;
+    });
+  }
+
+  // Oura Settings IPC handlers
+  ipcMain.handle("oura-get-token", async () => {
+    return _ouraClient ? _ouraClient.apiToken : null;
+  });
+
+  ipcMain.handle("oura-save-token", async (event, token) => {
+    if (!_ouraClient) {
+      const OuraClient = require("../services/oura-client");
+      _ouraClient = new OuraClient();
+    }
+    _ouraClient.setToken(token);
+
+    // Fetch health data immediately after saving token
+    try {
+      const healthData = await _ouraClient.fetchUserHealthData();
+      _ouraClient.saveCacheHealth(healthData);
+      _state.setHealthState(healthData.healthState);
+
+      // Notify settings window
+      if (ouraSettingsWin && !ouraSettingsWin.isDestroyed()) {
+        ouraSettingsWin.webContents.send("health-updated");
+      }
+
+      console.log("OpenClaw Buddy: Oura token saved and health data fetched");
+    } catch (err) {
+      console.warn("OpenClaw Buddy: Failed to fetch health data after saving token:", err.message);
+    }
+  });
+
+  ipcMain.handle("oura-test-connection", async (event, token) => {
+    try {
+      const OuraClient = require("../services/oura-client");
+      const tempClient = new OuraClient();
+      tempClient.apiToken = token;
+      return await tempClient.testConnection();
+    } catch (err) {
+      return { success: false, message: err.message };
+    }
+  });
+
+  ipcMain.handle("oura-get-health", async () => {
+    if (!_ouraClient) return null;
+
+    // Try cache first
+    let healthData = _ouraClient.getCachedHealth();
+
+    // If no cache, try to fetch
+    if (!healthData && _ouraClient.apiToken) {
+      try {
+        healthData = await _ouraClient.fetchUserHealthData();
+        _ouraClient.saveCacheHealth(healthData);
+      } catch (err) {
+        console.warn("Failed to fetch health data:", err.message);
+      }
+    }
+
+    return healthData;
+  });
+
+  ipcMain.on("oura-close-settings", () => {
+    if (ouraSettingsWin && !ouraSettingsWin.isDestroyed()) {
+      ouraSettingsWin.close();
+    }
+  });
+
+  ipcMain.on("oura-open-token-page", () => {
+    require("electron").shell.openExternal("https://cloud.ouraring.com/personal-access-tokens");
+  });
 
   ipcMain.on("show-context-menu", showPetContextMenu);
 

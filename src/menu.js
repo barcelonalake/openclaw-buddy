@@ -106,6 +106,7 @@ const i18n = {
     theme: "Theme",
     openThemeDir: "Open Theme Folder…",
     toggleShortcut: "Toggle Shortcut: {shortcut}",
+    ouraSettings: "Oura Settings…",
     quit: "Quit",
   },
   zh: {
@@ -160,6 +161,7 @@ const i18n = {
     theme: "主题",
     openThemeDir: "打开主题文件夹…",
     toggleShortcut: "切换快捷键: {shortcut}",
+    ouraSettings: "Oura 设置…",
     quit: "退出",
   },
 };
@@ -383,6 +385,10 @@ module.exports = function initMenu(ctx) {
           { label: "中文", type: "radio", checked: ctx.lang === "zh", click: () => setLanguage("zh") },
         ],
       },
+      {
+        label: t("ouraSettings"),
+        click: () => ctx.openOuraSettings(),
+      },
       { type: "separator" },
       {
         label: ctx.petHidden ? t("showPet") : t("hidePet"),
@@ -529,6 +535,11 @@ module.exports = function initMenu(ctx) {
       );
     }
     template.push(
+      { type: "separator" },
+      {
+        label: t("ouraSettings"),
+        click: () => ctx.openOuraSettings(),
+      },
       { type: "separator" },
       {
         label: t("toggleShortcut").replace("{shortcut}", isMac ? "⌘⇧⌥C" : "Ctrl+Shift+Alt+C"),

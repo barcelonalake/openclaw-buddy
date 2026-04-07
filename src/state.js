@@ -64,6 +64,9 @@ let autoReturnTimer = null;
 let pendingState = null;
 let eyeResendTimer = null;
 
+// ── Health dimension (Oura Ring integration) ──
+let currentHealthState = "HEALTHY"; // HEALTHY | WEAK | OVERLOAD
+
 // ── Wake poll ──
 let wakePollTimer = null;
 let lastWakeCursorX = null, lastWakeCursorY = null;
@@ -176,7 +179,7 @@ function applyState(state, svgOverride) {
     currentHitBox = HIT_BOXES.default;
   }
 
-  ctx.sendToRenderer("state-change", state, svg);
+  ctx.sendToRenderer("state-change", state, svg, currentHealthState);
   ctx.syncHitWin();
   ctx.sendToHitWin("hit-state-sync", { currentSvg: svg, currentState: state });
   ctx.sendToHitWin("hit-cancel-reaction");
@@ -652,6 +655,18 @@ function getCurrentSvg() { return currentSvg; }
 function getCurrentHitBox() { return currentHitBox; }
 function getStartupRecoveryActive() { return startupRecoveryActive; }
 
+function setHealthState(healthState) {
+  if (currentHealthState === healthState) return;
+  currentHealthState = healthState;
+  console.log("OpenClaw Buddy: Health state changed to", healthState);
+  // Re-apply current state to update visual effects
+  ctx.sendToRenderer("health-change", currentHealthState);
+}
+
+function getCurrentHealthState() {
+  return currentHealthState;
+}
+
 function cleanup() {
   if (pendingTimer) clearTimeout(pendingTimer);
   if (autoReturnTimer) clearTimeout(autoReturnTimer);
@@ -668,6 +683,7 @@ return {
   getSvgOverride, cleanStaleSessions, startStartupRecovery,
   detectRunningAgentProcesses, buildSessionSubmenu,
   getCurrentState, getCurrentSvg, getCurrentHitBox, getStartupRecoveryActive,
+  setHealthState, getCurrentHealthState,
   sessions, STATE_SVGS, STATE_PRIORITY, ONESHOT_STATES, SLEEP_SEQUENCE,
   HIT_BOXES, WIDE_SVGS,
   cleanup,

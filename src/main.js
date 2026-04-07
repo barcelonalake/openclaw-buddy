@@ -71,6 +71,8 @@ function savePrefs() {
 let _codexMonitor = null;          // Codex CLI JSONL log polling instance
 let _geminiMonitor = null;         // Gemini CLI session JSON polling instance
 let _openclawMonitor = null;       // OpenClaw Gateway WebSocket monitor instance
+let _ouraClient = null;            // Oura Ring API client instance
+let _ouraRefreshTimer = null;      // Oura health data refresh timer
 
 // ── Theme loader ──
 const themeLoader = require("./theme-loader");
@@ -1056,6 +1058,51 @@ if (!gotTheLock) {
       console.warn("OpenClaw Buddy: OpenClaw monitor not started:", err.message);
     }
 
+    // Initialize Oura Ring API client
+    try {
+      const OuraClient = require("../services/oura-client");
+      _ouraClient = new OuraClient();
+
+      // Initial health data fetch (with fallback to cache)
+      const fetchHealthData = async () => {
+        try {
+          if (!_ouraClient.apiToken) {
+            console.log("OpenClaw Buddy: Oura API token not configured");
+            return;
+          }
+
+          // Try cache first
+          let healthData = _ouraClient.getCachedHealth();
+
+          // Fetch fresh data if cache is stale
+          if (!healthData) {
+            console.log("OpenClaw Buddy: Fetching Oura health data...");
+            healthData = await _ouraClient.fetchUserHealthData();
+            _ouraClient.saveCacheHealth(healthData);
+          }
+
+          console.log("OpenClaw Buddy: Health state:", healthData.healthState,
+                      `(Sleep: ${healthData.sleepScore}, Readiness: ${healthData.readinessScore})`);
+
+          // Integrate health state into state machine
+          _state.setHealthState(healthData.healthState);
+        } catch (err) {
+          console.warn("OpenClaw Buddy: Failed to fetch Oura health data:", err.message);
+        }
+      };
+
+      // Fetch immediately
+      fetchHealthData();
+
+      // Refresh every hour
+      const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+      _ouraRefreshTimer = setInterval(fetchHealthData, REFRESH_INTERVAL_MS);
+
+      console.log("OpenClaw Buddy: Oura client initialized");
+    } catch (err) {
+      console.warn("OpenClaw Buddy: Oura client not initialized:", err.message);
+    }
+
     // Auto-install VS Code/Cursor terminal-focus extension
     try { installTerminalFocusExtension(); } catch (err) {
       console.warn("Clawd: failed to auto-install terminal-focus extension:", err.message);
@@ -1076,6 +1123,13 @@ if (!gotTheLock) {
     if (_openclawMonitor) {
       _openclawMonitor.stop();
     }
+
+    // Stop Oura refresh timer
+    if (_ouraRefreshTimer) {
+      clearInterval(_ouraRefreshTimer);
+      _ouraRefreshTimer = null;
+    }
+
     _server.cleanup();
     _state.cleanup();
     _tick.cleanup();

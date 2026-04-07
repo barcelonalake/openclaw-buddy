@@ -41,3 +41,28 @@ html, body {
 #pet-container.mini-left {
   transform: scaleX(-1);
 }
+
+/* Health state filters (Oura Ring integration) */
+/* HEALTHY: Normal appearance (default, no filter) */
+#pet-container.health-healthy #clawd {
+  filter: none;
+  animation-duration: 1s; /* Normal animation speed */
+}
+
+/* WEAK: Desaturated + slightly darker */
+#pet-container.health-weak #clawd {
+  filter: saturate(0.5) brightness(0.9);
+  animation-duration: 1.67s; /* 60% speed = 1/0.6 = 1.67x duration */
+}
+
+/* OVERLOAD: Red tint + high contrast + very slow */
+#pet-container.health-overload #clawd {
+  filter: saturate(0.7) brightness(0.8) hue-rotate(-30deg) contrast(1.2);
+  animation-duration: 3.33s; /* 30% speed = 1/0.3 = 3.33x duration */
+}
+
+/* Add a red glow for OVERLOAD state */
+#pet-container.health-overload #clawd {
+  filter: saturate(0.7) brightness(0.8) hue-rotate(-30deg) contrast(1.2) drop-shadow(0 0 8px rgba(255, 50, 50, 0.6));
+  animation-duration: 3.33s;
+}

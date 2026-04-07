@@ -61,6 +61,9 @@ let currentIdleSvg = null;    // tracks which SVG is currently showing
 let dndEnabled = false;
 let miniLeftFlip = false;
 
+// --- Health state (Oura Ring integration) ---
+let currentHealthState = "HEALTHY"; // HEALTHY | WEAK | OVERLOAD
+
 window.electronAPI.onDndChange((enabled) => { dndEnabled = enabled; });
 
 window.electronAPI.onMiniModeChange((enabled, edge) => {
@@ -72,6 +75,27 @@ window.electronAPI.onMiniModeChange((enabled, edge) => {
     removeGlyphFlipCompensation(clawdEl);
   }
 });
+
+// Health state change listener
+window.electronAPI.onHealthChange((healthState) => {
+  currentHealthState = healthState;
+  applyHealthFilter();
+});
+
+// Apply CSS filters based on health state
+function applyHealthFilter() {
+  // Remove existing health classes
+  container.classList.remove("health-healthy", "health-weak", "health-overload");
+
+  // Add current health class
+  if (currentHealthState === "WEAK") {
+    container.classList.add("health-weak");
+  } else if (currentHealthState === "OVERLOAD") {
+    container.classList.add("health-overload");
+  } else {
+    container.classList.add("health-healthy");
+  }
+}
 
 // Counter-flip asymmetric pixel-art glyphs (Zzz) inside SVG defs so they
 // render correctly when the container has scaleX(-1). Only the glyph shape
@@ -285,7 +309,13 @@ function swapToFile(file, state, useObjectChannel) {
 }
 
 // --- State change → switch animation (preload + instant swap) ---
-window.electronAPI.onStateChange((state, svg) => {
+window.electronAPI.onStateChange((state, svg, healthState) => {
+  // Update health state if provided
+  if (healthState && healthState !== currentHealthState) {
+    currentHealthState = healthState;
+    applyHealthFilter();
+  }
+
   // Main process state change → cancel any active click reaction
   cancelReaction();
 

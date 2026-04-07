@@ -166,13 +166,46 @@ class OuraClient {
    * @returns {Promise<{sleepScore: number, readinessScore: number, healthState: string}>}
    */
   async fetchUserHealthData() {
-    const [sleepData, readinessData] = await Promise.all([
-      this.fetchSleepData(),
-      this.fetchReadinessData()
-    ]);
+    // Try to get sleep data (try yesterday first, then today, then last 7 days)
+    let sleepData = null;
+    let sleepDate = null;
+
+    for (let i = 1; i <= 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - (i === 1 ? 1 : i - 2)); // -1, 0, -2, -3, ...
+
+      try {
+        sleepData = await this.fetchSleepData(date);
+        sleepDate = date;
+        break;
+      } catch (err) {
+        continue;
+      }
+    }
+
+    if (!sleepData) {
+      throw new OuraAPIError('No sleep data available in the last 7 days', 'NO_DATA');
+    }
+
+    // Try to get readiness data (for today or the day after sleep)
+    let readinessData = null;
+
+    try {
+      readinessData = await this.fetchReadinessData(); // Today
+    } catch (err) {
+      // If today's readiness not available, try the day after sleep
+      try {
+        const nextDay = new Date(sleepDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        readinessData = await this.fetchReadinessData(nextDay);
+      } catch (err2) {
+        // Use default value if no readiness available
+        readinessData = { score: 70 }; // Default to neutral
+      }
+    }
 
     const sleepScore = sleepData.score || 0;
-    const readinessScore = readinessData.score || 0;
+    const readinessScore = readinessData.score || 70;
 
     const healthState = this.determineHealthState(sleepScore, readinessScore);
 

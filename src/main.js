@@ -70,6 +70,7 @@ function savePrefs() {
 
 let _codexMonitor = null;          // Codex CLI JSONL log polling instance
 let _geminiMonitor = null;         // Gemini CLI session JSON polling instance
+let _openclawMonitor = null;       // OpenClaw Gateway WebSocket monitor instance
 
 // ── Theme loader ──
 const themeLoader = require("./theme-loader");
@@ -1042,6 +1043,19 @@ if (!gotTheLock) {
       console.warn("Clawd: Gemini log monitor not started:", err.message);
     }
 
+    // Start OpenClaw Gateway WebSocket monitor
+    try {
+      const OpenClawMonitor = require("../agents/openclaw-monitor");
+      const openclawAgent = require("../agents/openclaw");
+      _openclawMonitor = new OpenClawMonitor(openclawAgent, (sid, state, event, extra) => {
+        updateSession(sid, state, event, null, extra.cwd, extra.source_pid, null, null, "openclaw");
+      });
+      _openclawMonitor.start();
+      console.log("OpenClaw Buddy: OpenClaw monitor started");
+    } catch (err) {
+      console.warn("OpenClaw Buddy: OpenClaw monitor not started:", err.message);
+    }
+
     // Auto-install VS Code/Cursor terminal-focus extension
     try { installTerminalFocusExtension(); } catch (err) {
       console.warn("Clawd: failed to auto-install terminal-focus extension:", err.message);
@@ -1057,6 +1071,11 @@ if (!gotTheLock) {
     unregisterToggleShortcut();
     globalShortcut.unregisterAll();
     _perm.cleanup();
+
+    // Stop OpenClaw monitor
+    if (_openclawMonitor) {
+      _openclawMonitor.stop();
+    }
     _server.cleanup();
     _state.cleanup();
     _tick.cleanup();
